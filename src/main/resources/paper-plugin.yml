@@ -1,13 +1,13 @@
-name: "PaperPluginTemplate"
+name: "MiniRanks"
 version: "${version}"
 authors:
   - SQD Studios
 
-main: net.chamosmp.PaperPluginTemplate
+main: net.chamosmp.miniranks.MiniRanksPlugin
 #Loader: net.chamosmp.
 
 api-version: "1.21.11"
-website: https://github.com/SQD-Studios/paper-plugin-template
+website: https://github.com/SQD-Studios/MiniRanks
 
 folia-supported: true
 
@@ -17,4 +17,8 @@ dependencies:
     PlaceholderAPI:
       load: BEFORE
       required: false
+      join-classpath: true
+    LuckPerms:
+      load: BEFORE
+      required: true
       join-classpath: true

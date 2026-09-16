@@ -1,1 +1,1 @@
-rootProject.name = "paper-plugin-template"
+rootProject.name = "MiniRanks"

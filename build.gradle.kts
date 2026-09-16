@@ -29,6 +29,7 @@ repositories {
         name = "PlaceholderAPI"
         url = uri("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     }
+    maven("https://nexus.scarsz.me/content/groups/public/")
 }
 
 dependencies {
@@ -39,18 +40,24 @@ dependencies {
     annotationProcessor("net.strokkur.commands:processor-paper:2.3.0")
 
     compileOnly("me.clip:placeholderapi:2.12.3")
+    compileOnly("net.luckperms:api:5.5")
 }
 
 tasks {
     runServer {
         minecraftVersion("26.2")
+
+        downloadPlugins {
+            modrinth("Vebnzrzj", "v5.5.71-bukkit") // LuckPerms
+            modrinth("lKEzGugV", "2.12.3") // PlaceholderAPI
+        }
     }
     runPaper.folia.registerTask()
 
     shadowJar {
         configurations = project.configurations.runtimeClasspath.map { setOf(it) }
 
-        relocate("net.chamosmp.sqdlib", "net.chamosmp.(plugin).libs.sqdlib")
+        relocate("net.chamosmp.sqdlib", "net.chamosmp.miniranks.libs.sqdlib")
     }
 
     processResources {
@@ -75,7 +82,7 @@ hangarPublish {
     publications.register("plugin") {
         version.set(project.version as String)
         channel.set("Release")
-        id.set("MiniLobby")
+        id.set("")
         apiKey.set(System.getenv("HANGAR_API_TOKEN"))
         platforms {
             register(Platforms.PAPER) {
@@ -94,7 +101,7 @@ hangarPublish {
 
 modrinth {
     token.set(System.getenv("MODRINTH_TOKEN"))
-    projectId.set("hUJyv10y")
+    projectId.set("")
     uploadFile.set(tasks.shadowJar)
     gameVersions.addAll(
         "1.21",
@@ -118,11 +125,4 @@ modrinth {
     dependencies {
         optional.project("lKEzGugV") // PlaceholderAPI
     }
-}
-
-tasks.register("publishToAllPlatforms") {
-    group = "publishing"
-    description = "Publishes all platforms"
-    dependsOn("modrinth")
-    dependsOn("publishAllPublicationsToHangar")
 }

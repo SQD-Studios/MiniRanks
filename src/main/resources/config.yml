@@ -1,0 +1,27 @@
+notes:
+  groups:
+    elite:
+      upgrade:
+        name: "<b><green>Elite > %target_rank%"
+        material: "PAPER"
+        lore:
+          - ""
+      name: "<green>Elite <i><dark_gray>[Rank]"
+      material: "PAPER"
+      lore:
+        - ""
+    default:
+      upgrade:
+        name: "<b><green>Player > %target_rank%"
+        material: "PAPER"
+        lore:
+          - ""
+      name: "<aqua>%group% <i><dark_gray>[Rank]"
+      material: "PAPER"
+      lore:
+        - ""
+
+group-progress:
+  - elite
+  - legend
+  - jester
