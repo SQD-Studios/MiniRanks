@@ -28,8 +28,8 @@ jobs:
 
       - name: Publish to all platforms
         run: |
-          ./gradlew plugin:modrinth
-          ./gradlew plugin:publishAllPublicationsToHangar
+          ./gradlew modrinth
+          ./gradlew publishAllPublicationsToHangar
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           HANGAR_API_TOKEN: ${{ secrets.HANGAR_API_TOKEN }}
