@@ -92,7 +92,9 @@ public class BaseCommand {
             int am = amount.orElse(1);
             ItemStack item = noteMakerUtil.createUpgradeNote(targetGroup, groupNeeded, targetGroupDisplayName, requiredGroupDisplayName);
             item.setAmount(am);
-            target.getInventory().addItem(item);
+
+            HashMap<Integer, ItemStack> didntFit = target.getInventory().addItem(item);
+            if (!didntFit.isEmpty()) target.getWorld().dropItemNaturally(target.getLocation(), item);
         }
     }
 
