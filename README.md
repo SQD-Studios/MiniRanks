@@ -1,3 +1,5 @@
+# MiniRanks
+
 A "simple" plugin (That's why it's called mini), that does 1 thing. Give "ranks" (LuckPerms Groups). It doesn't provide
 any cosmetic stuff, like custom chat, image prefixes or anything like that. For that use TAB for most stuff
 and [Irene](https://github.com/SQD-Studios/Irene) for the chat. To give players ranks, you create "Notes" which can do
