@@ -8,15 +8,18 @@ import net.luckperms.api.model.group.Group;
 import net.strokkur.commands.Command;
 import net.strokkur.commands.Executes;
 import net.strokkur.commands.Subcommand;
+import net.strokkur.commands.permission.Permission;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
 @Command("miniranks")
+@Permission("miniranks.admin")
 public class BaseCommand {
     private final NoteMakerUtil noteMakerUtil;
     private final Plugin plugin;
@@ -41,9 +44,10 @@ public class BaseCommand {
             int am = amount.orElse(1);
             int endsIn = endsInDays.orElse(-1);
 
-            ItemStack item = noteMakerUtil.createGrantNote(group.getFriendlyName(), endsIn);
+            ItemStack item = noteMakerUtil.createGrantNote(targetGroup, endsIn, group.getFriendlyName());
             item.setAmount(am);
-            target.getInventory().addItem(item);
+            HashMap<Integer, ItemStack> didntFit = target.getInventory().addItem(item);
+            if (!didntFit.isEmpty()) target.getWorld().dropItemNaturally(target.getLocation(), item);
             sender.sendMessage(ColorUtil.parse("<green>Added a note to the target's inventory."));
         }
 
@@ -52,6 +56,10 @@ public class BaseCommand {
             String groupNeeded = "";
             Group group = null;
             List<String> groups = plugin.getConfig().getStringList("group-progress");
+
+            String targetGroupDisplayName;
+            String requiredGroupDisplayName = null;
+
             for (int i = 0; i < groups.size(); i++) {
                 if (groups.get(i).equalsIgnoreCase(targetGroup)) {
                     if (i == 0) {
@@ -65,7 +73,8 @@ public class BaseCommand {
                         sender.sendMessage(ColorUtil.parse("<red>Invalid group! Please ensure it's the same on the config and luckperms"));
                         return;
                     }
-                    groupNeeded = group.getFriendlyName();
+                    groupNeeded = group.getName();
+                    requiredGroupDisplayName = group.getFriendlyName();
                     break;
                 }
             }
@@ -77,11 +86,11 @@ public class BaseCommand {
                 sender.sendMessage(ColorUtil.parse("<red>Invalid group! Please ensure it's the same on the config and luckperms"));
                 return;
             } else {
-                targetGroup = group.getFriendlyName();
+                targetGroupDisplayName = group.getFriendlyName();
             }
 
             int am = amount.orElse(1);
-            ItemStack item = noteMakerUtil.createUpgradeNote(targetGroup, groupNeeded);
+            ItemStack item = noteMakerUtil.createUpgradeNote(targetGroup, groupNeeded, targetGroupDisplayName, requiredGroupDisplayName);
             item.setAmount(am);
             target.getInventory().addItem(item);
         }

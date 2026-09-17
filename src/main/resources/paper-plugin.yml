@@ -21,3 +21,9 @@ dependencies:
       load: BEFORE
       required: true
       join-classpath: true
+
+
+permissions:
+  miniranks.admin:
+    default: op
+    description: "Allows using all the actions that MiniRanks provides on the admin end"

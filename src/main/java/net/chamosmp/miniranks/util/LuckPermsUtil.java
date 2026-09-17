@@ -6,8 +6,9 @@ import net.chamosmp.sqdlib.util.LogType;
 import net.luckperms.api.LuckPerms;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NullMarked;
 
+@NullMarked
 public class LuckPermsUtil {
     private LuckPerms luckPerms;
 
@@ -29,7 +30,7 @@ public class LuckPermsUtil {
         LoggerUtil.log(LogType.INFO, "LuckPerms found!");
     }
 
-    public @NotNull LuckPerms getLuckPerms() {
+    public LuckPerms getLuckPerms() {
         return luckPerms;
     }
 }

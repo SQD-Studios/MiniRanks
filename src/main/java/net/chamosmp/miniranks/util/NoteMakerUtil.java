@@ -9,6 +9,7 @@ import net.luckperms.api.node.NodeEqualityPredicate;
 import net.luckperms.api.util.Tristate;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,13 +19,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
+@NullMarked
 public class NoteMakerUtil implements Listener {
     private final Plugin plugin;
     private final LuckPermsUtil util;
@@ -49,8 +51,8 @@ public class NoteMakerUtil implements Listener {
     }
 
 
-    public ItemStack createGrantNote(String group, int endsIn) {
-        ItemStack item = createGeneralNote(group, false, Map.of("group", group, "time_left", endsIn), endsIn < 0);
+    public ItemStack createGrantNote(String group, int endsIn, String groupDisplayName) {
+        ItemStack item = createGeneralNote(group, false, Map.of("group", groupDisplayName, "time_left", endsIn), endsIn < 0);
         item.editPersistentDataContainer(persistentDataContainer -> {
             persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, false);
             persistentDataContainer.set(ENDS_IN, PersistentDataType.INTEGER, endsIn);
@@ -58,8 +60,8 @@ public class NoteMakerUtil implements Listener {
         return item;
     }
 
-    public ItemStack createUpgradeNote(String group, String requiredGroup) {
-        ItemStack item = createGeneralNote(group, true, Map.of("group", requiredGroup, "target_rank", group), true);
+    public ItemStack createUpgradeNote(String group, String requiredGroup, String groupDisplayName, String requiredGroupDisplayName) {
+        ItemStack item = createGeneralNote(group, true, Map.of("group", requiredGroupDisplayName, "target_rank", groupDisplayName), true);
         item.editPersistentDataContainer(persistentDataContainer -> {
             persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, true);
             persistentDataContainer.set(UPGRADE_NEEDS_GROUP, PersistentDataType.STRING, requiredGroup);
@@ -68,67 +70,67 @@ public class NoteMakerUtil implements Listener {
     }
 
     private ItemStack createGeneralNote(String group, boolean isUpgrade, Map<?, ?> placeholders, boolean isPermanent) {
-        AtomicReference<ItemStack> item = new AtomicReference<>(new ItemStack(Material.PAPER));
-        plugin.getConfig().getConfigurationSection("notes.groups").getKeys(false).forEach(key -> {
-            if (key.equalsIgnoreCase(group)) {
-                String materialString;
-                Component customName;
-                List<Component> lore = new ArrayList<>();
+        ItemStack item = new ItemStack(Material.BARRIER);
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("notes.groups." + group);
+        if (section == null) {
+            section = plugin.getConfig().getConfigurationSection("notes.groups.default");
+            if (section == null) return item;
+        }
 
-                if (!isUpgrade) {
-                    materialString = plugin.getConfig().getString("notes.groups." + key + ".material", "PAPER");
+        String materialString;
+        Component customName;
+        List<Component> lore = new ArrayList<>();
 
-                    if (isPermanent) {
-                        customName = ColorUtil.parse(
-                                null,
-                                plugin.getConfig().getString("notes.groups." + key + ".name", "<aqua>%group% <i><dark_gray>[Rank]"),
-                                placeholders
-                        );
-                    } else {
-                        customName = ColorUtil.parse(
-                                null,
-                                plugin.getConfig().getString("notes.groups." + key + ".name-with-time-left", "<aqua>%group% <i><dark_gray>[Rank]"),
-                                placeholders
-                        );
-                    }
+        if (!isUpgrade) {
+            materialString = section.getString("material", "PAPER");
 
-                    for (String i : plugin.getConfig().getStringList("notes.groups." + key + ".lore")) {
-                        lore.add(ColorUtil.parse(i));
-                    }
-                } else {
-                    materialString = plugin.getConfig().getString("notes.groups." + key + ".upgrade.material", "PAPER");
-                    customName = ColorUtil.parse(
-                            null,
-                            plugin.getConfig().getString("notes.groups." + key + ".upgrade.name", "<aqua>%group% <i><dark_gray>[Rank]"),
-                            placeholders
-                    );
-                    for (String i : plugin.getConfig().getStringList("notes.groups." + key + ".upgrade.lore")) {
-                        lore.add(ColorUtil.parse(null, i, placeholders));
-                    }
-                }
-
-                Material material = Material.getMaterial(materialString);
-                ItemStack itemStack = item.get();
-                if (material != null) {
-                    itemStack = item.get().withType(material);
-                }
-
-                ItemMeta meta = itemStack.getItemMeta();
-                meta.customName(customName);
-                itemStack.setItemMeta(meta);
-
-                itemStack.editPersistentDataContainer(container -> {
-                    container.set(IS_NOTE, PersistentDataType.BOOLEAN, true);
-                    container.set(LUCKPERMS_GROUP, PersistentDataType.STRING, group);
-                });
-
-                if (lore.isEmpty()) lore = null;
-                itemStack.lore(lore);
-
-                item.set(itemStack);
+            if (isPermanent) {
+                customName = ColorUtil.parse(
+                        null,
+                        section.getString("name", "<aqua>%group% <i><dark_gray>[Rank]"),
+                        placeholders
+                );
+            } else {
+                customName = ColorUtil.parse(
+                        null,
+                        section.getString("name-with-time-left", "<aqua>%group% <i><dark_gray>[Rank]"),
+                        placeholders
+                );
             }
+
+            for (String i : section.getStringList("lore")) {
+                lore.add(ColorUtil.parse(i));
+            }
+        } else {
+            materialString = section.getString("upgrade.material", "PAPER");
+            customName = ColorUtil.parse(
+                    null,
+                    section.getString("upgrade.name", "<aqua>%group% <i><dark_gray>[Rank]"),
+                    placeholders
+            );
+            for (String i : section.getStringList("upgrade.lore")) {
+                lore.add(ColorUtil.parse(null, i, placeholders));
+            }
+        }
+
+        Material material = Material.getMaterial(materialString);
+        if (material != null) {
+            item = item.withType(material);
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        meta.customName(customName);
+        item.setItemMeta(meta);
+
+        item.editPersistentDataContainer(container -> {
+            container.set(IS_NOTE, PersistentDataType.BOOLEAN, true);
+            container.set(LUCKPERMS_GROUP, PersistentDataType.STRING, group);
         });
-        return item.get();
+
+        if (lore.isEmpty()) lore = null;
+        item.lore(lore);
+
+        return item;
     }
 
     @EventHandler
@@ -193,6 +195,6 @@ public class NoteMakerUtil implements Listener {
         Node node = Node.builder("group." + groupString)
                 .value(true)
                 .build();
-        return util.getLuckPerms().getUserManager().getUser(player.getUniqueId()).data().contains(node, NodeEqualityPredicate.ONLY_KEY) == Tristate.TRUE;
+        return util.getLuckPerms().getPlayerAdapter(Player.class).getUser(player).data().contains(node, NodeEqualityPredicate.ONLY_KEY) == Tristate.TRUE;
     }
 }
