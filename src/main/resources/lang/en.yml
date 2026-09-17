@@ -1,0 +1,3 @@
+already-has-group: "<red>You already own this rank!"
+not-have-previous-rank-for-upgrade: "<red>You don't have the previous rank to use the upgrade!"
+granted-rank: "<green>You have been granted this rank!"

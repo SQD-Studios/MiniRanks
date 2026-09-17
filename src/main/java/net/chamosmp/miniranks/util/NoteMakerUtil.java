@@ -1,10 +1,11 @@
 package net.chamosmp.miniranks.util;
 
 import net.chamosmp.sqdlib.paper.util.ColorUtil;
+import net.chamosmp.sqdlib.paper.util.LanguageUtil;
 import net.kyori.adventure.text.Component;
 import net.luckperms.api.model.group.Group;
+import net.luckperms.api.node.Node;
 import net.luckperms.api.node.NodeEqualityPredicate;
-import net.luckperms.api.node.types.PermissionNode;
 import net.luckperms.api.util.Tristate;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -21,36 +22,44 @@ import org.bukkit.plugin.Plugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class NoteMakerUtil implements Listener {
     private final Plugin plugin;
     private final LuckPermsUtil util;
+    private final LanguageUtil languageUtil;
 
     private final NamespacedKey IS_NOTE;
     private final NamespacedKey LUCKPERMS_GROUP;
     private final NamespacedKey IS_UPGRADE;
     private final NamespacedKey UPGRADE_NEEDS_GROUP;
+    private final NamespacedKey ENDS_IN;
 
-    public NoteMakerUtil(Plugin plugin, LuckPermsUtil util) {
+    public NoteMakerUtil(Plugin plugin, LuckPermsUtil util, LanguageUtil languageUtil) {
         this.plugin = plugin;
         this.util = util;
+        this.languageUtil = languageUtil;
 
         IS_NOTE = new NamespacedKey(plugin, "is_miniranks_note");
         LUCKPERMS_GROUP = new NamespacedKey(plugin, "miniranks_group");
         IS_UPGRADE = new NamespacedKey(plugin, "is_upgrade");
         UPGRADE_NEEDS_GROUP = new NamespacedKey(plugin, "upgrade_needs_group");
+        ENDS_IN = new NamespacedKey(plugin, "ends_in");
     }
 
 
-    public ItemStack createGrantNote(String group) {
-        ItemStack item = createGeneralNote(group, false, Map.of("group", group));
-        item.editPersistentDataContainer(persistentDataContainer -> persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, false));
+    public ItemStack createGrantNote(String group, int endsIn) {
+        ItemStack item = createGeneralNote(group, false, Map.of("group", group, "time_left", endsIn), endsIn < 0);
+        item.editPersistentDataContainer(persistentDataContainer -> {
+            persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, false);
+            persistentDataContainer.set(ENDS_IN, PersistentDataType.INTEGER, endsIn);
+        });
         return item;
     }
 
     public ItemStack createUpgradeNote(String group, String requiredGroup) {
-        ItemStack item = createGeneralNote(group, true, Map.of("group", group));
+        ItemStack item = createGeneralNote(group, true, Map.of("group", requiredGroup, "target_rank", group), true);
         item.editPersistentDataContainer(persistentDataContainer -> {
             persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, true);
             persistentDataContainer.set(UPGRADE_NEEDS_GROUP, PersistentDataType.STRING, requiredGroup);
@@ -58,21 +67,30 @@ public class NoteMakerUtil implements Listener {
         return item;
     }
 
-    private ItemStack createGeneralNote(String group, boolean isUpgrade, Map<?, ?> placeholders) {
+    private ItemStack createGeneralNote(String group, boolean isUpgrade, Map<?, ?> placeholders, boolean isPermanent) {
         AtomicReference<ItemStack> item = new AtomicReference<>(new ItemStack(Material.PAPER));
         plugin.getConfig().getConfigurationSection("notes.groups").getKeys(false).forEach(key -> {
-            if (key.equals(group)) {
+            if (key.equalsIgnoreCase(group)) {
                 String materialString;
                 Component customName;
                 List<Component> lore = new ArrayList<>();
 
                 if (!isUpgrade) {
                     materialString = plugin.getConfig().getString("notes.groups." + key + ".material", "PAPER");
-                    customName = ColorUtil.parse(
-                            null,
-                            plugin.getConfig().getString("notes.groups." + key + ".name", "<aqua>%group% <i><dark_gray>[Rank]"),
-                            Map.of("group", group)
-                    );
+
+                    if (isPermanent) {
+                        customName = ColorUtil.parse(
+                                null,
+                                plugin.getConfig().getString("notes.groups." + key + ".name", "<aqua>%group% <i><dark_gray>[Rank]"),
+                                placeholders
+                        );
+                    } else {
+                        customName = ColorUtil.parse(
+                                null,
+                                plugin.getConfig().getString("notes.groups." + key + ".name-with-time-left", "<aqua>%group% <i><dark_gray>[Rank]"),
+                                placeholders
+                        );
+                    }
 
                     for (String i : plugin.getConfig().getStringList("notes.groups." + key + ".lore")) {
                         lore.add(ColorUtil.parse(i));
@@ -85,7 +103,7 @@ public class NoteMakerUtil implements Listener {
                             placeholders
                     );
                     for (String i : plugin.getConfig().getStringList("notes.groups." + key + ".upgrade.lore")) {
-                        lore.add(ColorUtil.parse(i));
+                        lore.add(ColorUtil.parse(null, i, placeholders));
                     }
                 }
 
@@ -132,10 +150,14 @@ public class NoteMakerUtil implements Listener {
             if (needsGroup == null) return;
 
             if (hasGroup(player, needsGroup)) {
-                grantGroup(player, groupString);
+                grantGroup(player, groupString, item, -1);
+            } else {
+                player.sendMessage(ColorUtil.parse(languageUtil.getMessage("not-have-previous-rank-for-upgrade")));
             }
         } else {
-            grantGroup(player, groupString);
+            @SuppressWarnings("all")
+            int endsIn = item.getPersistentDataContainer().get(ENDS_IN, PersistentDataType.INTEGER);
+            grantGroup(player, groupString, item, endsIn);
         }
     }
 
@@ -143,23 +165,32 @@ public class NoteMakerUtil implements Listener {
         return Boolean.TRUE.equals(item.getPersistentDataContainer().get(IS_NOTE, PersistentDataType.BOOLEAN));
     }
 
-    private void grantGroup(Player player, String groupString) {
+    private void grantGroup(Player player, String groupString, ItemStack item, int endsIn) {
         if (hasGroup(player, groupString)) {
+            player.sendMessage(ColorUtil.parse(languageUtil.getMessage("already-has-group")));
             return;
         }
 
         Group group = util.getLuckPerms().getGroupManager().getGroup(groupString);
         if (group == null) return;
-        PermissionNode node = PermissionNode.builder("group." + groupString)
-                .value(true)
-                .build();
-        util.getLuckPerms().getUserManager().modifyUser(player.getUniqueId(), user -> {
-            user.data().add(node);
-        });
+        Node node;
+        if (endsIn > 0) {
+            node = Node.builder("group." + groupString)
+                    .value(true)
+                    .expiry(endsIn, TimeUnit.DAYS)
+                    .build();
+        } else {
+            node = Node.builder("group." + groupString)
+                    .value(true)
+                    .build();
+        }
+        util.getLuckPerms().getUserManager().modifyUser(player.getUniqueId(), user -> user.data().add(node));
+        player.sendMessage(ColorUtil.parse(languageUtil.getMessage("granted-rank")));
+        item.setAmount(item.getAmount() - 1);
     }
 
     private boolean hasGroup(Player player, String groupString) {
-        PermissionNode node = PermissionNode.builder("group." + groupString)
+        Node node = Node.builder("group." + groupString)
                 .value(true)
                 .build();
         return util.getLuckPerms().getUserManager().getUser(player.getUniqueId()).data().contains(node, NodeEqualityPredicate.ONLY_KEY) == Tristate.TRUE;

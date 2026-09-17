@@ -2,21 +2,45 @@ notes:
   groups:
     elite:
       upgrade:
-        name: "<b><green>Elite > %target_rank%"
+        name: "<b><green>%group% > %target_rank%"
         material: "PAPER"
         lore:
           - ""
-      name: "<green>Elite <i><dark_gray>[Rank]"
+      name: "<green>%group% <i><dark_gray>[Rank]"
+      name-with-time-left: "<green>%group% <i><dark_gray>[%time_left% Day Rank]"
+      material: "PAPER"
+      lore:
+        - ""
+    legend:
+      upgrade:
+        name: "<b><yellow>%group% > %target_rank%"
+        material: "PAPER"
+        lore:
+          - ""
+      name: "<yellow>%group% <i><dark_gray>[Rank]"
+      name-with-time-left: "<yellow>%group% <i><dark_gray>[%time_left% Day Rank]"
+      material: "PAPER"
+      lore:
+        - ""
+    jester:
+      upgrade:
+        name: "<b><red>%group% > %target_rank%"
+        material: "PAPER"
+        lore:
+          - ""
+      name: "<red>%group% <i><dark_gray>[Rank]"
+      name-with-time-left: "<red>%group% <i><dark_gray>[%time_left% Day Rank]"
       material: "PAPER"
       lore:
         - ""
     default:
       upgrade:
-        name: "<b><green>Player > %target_rank%"
+        name: "<b><green>%group% > %target_rank%"
         material: "PAPER"
         lore:
           - ""
       name: "<aqua>%group% <i><dark_gray>[Rank]"
+      name-with-time-left: "<aqua>%group% <i><dark_gray>[%time_left% Day Rank]"
       material: "PAPER"
       lore:
         - ""
@@ -25,3 +49,6 @@ group-progress:
   - elite
   - legend
   - jester
+
+
+language: en

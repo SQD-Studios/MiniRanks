@@ -4,7 +4,6 @@ authors:
   - SQD Studios
 
 main: net.chamosmp.miniranks.MiniRanksPlugin
-#Loader: net.chamosmp.
 
 api-version: "1.21.11"
 website: https://github.com/SQD-Studios/MiniRanks
