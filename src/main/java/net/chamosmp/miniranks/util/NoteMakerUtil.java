@@ -1,5 +1,6 @@
 package net.chamosmp.miniranks.util;
 
+import net.chamosmp.sqdlib.paper.note.NoteMaker;
 import net.chamosmp.sqdlib.paper.util.ColorUtil;
 import net.chamosmp.sqdlib.paper.util.LanguageUtil;
 import net.kyori.adventure.text.Component;
@@ -11,12 +12,11 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
@@ -25,25 +25,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @NullMarked
-public class NoteMakerUtil implements Listener {
+public class NoteMakerUtil implements NoteMaker.NoteListener {
     private final Plugin plugin;
     private final LuckPermsUtil util;
     private final LanguageUtil languageUtil;
+    private final NoteMaker noteMaker;
 
-    private final NamespacedKey IS_NOTE;
     private final NamespacedKey LUCKPERMS_GROUP;
     private final NamespacedKey IS_UPGRADE;
     private final NamespacedKey UPGRADE_NEEDS_GROUP;
     private final NamespacedKey ENDS_IN;
 
-    public NoteMakerUtil(Plugin plugin, LuckPermsUtil util, LanguageUtil languageUtil) {
+    public NoteMakerUtil(Plugin plugin, LuckPermsUtil util, LanguageUtil languageUtil, NoteMaker noteMaker) {
         this.plugin = plugin;
         this.util = util;
         this.languageUtil = languageUtil;
+        this.noteMaker = noteMaker;
+        noteMaker.addListener(this);
 
-        IS_NOTE = new NamespacedKey(plugin, "is_miniranks_note");
         LUCKPERMS_GROUP = new NamespacedKey(plugin, "miniranks_group");
         IS_UPGRADE = new NamespacedKey(plugin, "is_upgrade");
         UPGRADE_NEEDS_GROUP = new NamespacedKey(plugin, "upgrade_needs_group");
@@ -52,24 +54,22 @@ public class NoteMakerUtil implements Listener {
 
 
     public ItemStack createGrantNote(String group, int endsIn, String groupDisplayName) {
-        ItemStack item = createGeneralNote(group, false, Map.of("group", groupDisplayName, "time_left", endsIn), endsIn < 0);
-        item.editPersistentDataContainer(persistentDataContainer -> {
-            persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, false);
-            persistentDataContainer.set(ENDS_IN, PersistentDataType.INTEGER, endsIn);
-        });
-        return item;
+        return createGeneralNote(group, false, Map.of("group", groupDisplayName, "time_left", endsIn), endsIn < 0,
+                persistentDataContainer -> {
+                    persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, false);
+                    persistentDataContainer.set(ENDS_IN, PersistentDataType.INTEGER, endsIn);
+                });
     }
 
     public ItemStack createUpgradeNote(String group, String requiredGroup, String groupDisplayName, String requiredGroupDisplayName) {
-        ItemStack item = createGeneralNote(group, true, Map.of("group", requiredGroupDisplayName, "target_rank", groupDisplayName), true);
-        item.editPersistentDataContainer(persistentDataContainer -> {
-            persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, true);
-            persistentDataContainer.set(UPGRADE_NEEDS_GROUP, PersistentDataType.STRING, requiredGroup);
-        });
-        return item;
+        return createGeneralNote(group, true, Map.of("group", requiredGroupDisplayName, "target_rank", groupDisplayName), true,
+                persistentDataContainer -> {
+                    persistentDataContainer.set(IS_UPGRADE, PersistentDataType.BOOLEAN, true);
+                    persistentDataContainer.set(UPGRADE_NEEDS_GROUP, PersistentDataType.STRING, requiredGroup);
+                });
     }
 
-    private ItemStack createGeneralNote(String group, boolean isUpgrade, Map<?, ?> placeholders, boolean isPermanent) {
+    private ItemStack createGeneralNote(String group, boolean isUpgrade, Map<?, ?> placeholders, boolean isPermanent, Consumer<PersistentDataContainer> customPdc) {
         ItemStack item = new ItemStack(Material.BARRIER);
         ConfigurationSection section = plugin.getConfig().getConfigurationSection("notes.groups." + group);
         if (section == null) {
@@ -122,25 +122,21 @@ public class NoteMakerUtil implements Listener {
         meta.customName(customName);
         item.setItemMeta(meta);
 
-        item.editPersistentDataContainer(container -> {
-            container.set(IS_NOTE, PersistentDataType.BOOLEAN, true);
-            container.set(LUCKPERMS_GROUP, PersistentDataType.STRING, group);
-        });
-
         if (lore.isEmpty()) lore = null;
         item.lore(lore);
 
-        return item;
+        return noteMaker.createNote(item, container -> {
+            container.set(LUCKPERMS_GROUP, PersistentDataType.STRING, group);
+        });
     }
 
-    @EventHandler
-    public void onPlayerClickedItem(PlayerInteractEvent event) {
+    @Override
+    public void onPlayerClickNote(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
 
         if (item == null) return;
-        if (!isNote(item)) return;
 
         boolean isUpgrade = Boolean.TRUE.equals(item.getPersistentDataContainer().get(IS_UPGRADE, PersistentDataType.BOOLEAN));
         String groupString = item.getPersistentDataContainer().get(LUCKPERMS_GROUP, PersistentDataType.STRING);
@@ -161,10 +157,6 @@ public class NoteMakerUtil implements Listener {
             int endsIn = item.getPersistentDataContainer().get(ENDS_IN, PersistentDataType.INTEGER);
             grantGroup(player, groupString, item, endsIn);
         }
-    }
-
-    public boolean isNote(ItemStack item) {
-        return Boolean.TRUE.equals(item.getPersistentDataContainer().get(IS_NOTE, PersistentDataType.BOOLEAN));
     }
 
     private void grantGroup(Player player, String groupString, ItemStack item, int endsIn) {

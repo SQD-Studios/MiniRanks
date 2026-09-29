@@ -4,12 +4,12 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.chamosmp.miniranks.commands.BaseCommandBrigadier;
 import net.chamosmp.miniranks.util.LuckPermsUtil;
 import net.chamosmp.miniranks.util.NoteMakerUtil;
-import net.chamosmp.sqdlib.exceptions.CommandRegisterException;
+import net.chamosmp.sqdlib.exceptions.command.CommandRegisterException;
+import net.chamosmp.sqdlib.paper.note.NoteMaker;
 import net.chamosmp.sqdlib.paper.util.ConfigUtil;
 import net.chamosmp.sqdlib.paper.util.LanguageUtil;
 import net.chamosmp.sqdlib.paper.util.LoggerUtil;
-import net.chamosmp.sqdlib.util.LogType;
-import org.bukkit.Bukkit;
+import net.chamosmp.sqdlib.util.log.LogType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class MiniRanksPlugin extends JavaPlugin {
@@ -20,12 +20,10 @@ public class MiniRanksPlugin extends JavaPlugin {
         ConfigUtil.loadDataFile(this, "config.yml");
 
 
+        NoteMaker noteMaker = new NoteMaker(this);
         LuckPermsUtil util = new LuckPermsUtil(this);
         LanguageUtil languageUtil = new LanguageUtil(this);
-        NoteMakerUtil noteMakerUtil = new NoteMakerUtil(this, util, languageUtil);
-
-        Bukkit.getPluginManager().registerEvents(noteMakerUtil, this);
-
+        NoteMakerUtil noteMakerUtil = new NoteMakerUtil(this, util, languageUtil, noteMaker);
 
         try {
             this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {

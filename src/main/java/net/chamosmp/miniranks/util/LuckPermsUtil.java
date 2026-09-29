@@ -1,8 +1,8 @@
 package net.chamosmp.miniranks.util;
 
-import net.chamosmp.sqdlib.exceptions.PluginNotFoundException;
+import net.chamosmp.sqdlib.exceptions.plugin.PluginNotFoundException;
 import net.chamosmp.sqdlib.paper.util.LoggerUtil;
-import net.chamosmp.sqdlib.util.LogType;
+import net.chamosmp.sqdlib.util.log.LogType;
 import net.luckperms.api.LuckPerms;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
